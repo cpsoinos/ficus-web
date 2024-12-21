@@ -1,7 +1,25 @@
+import { dev } from '$app/environment';
 import type { Handle } from '@sveltejs/kit';
 import * as auth from '$lib/server/auth.js';
+import { Db } from '$lib/server/db';
 
-const handleAuth: Handle = async ({ event, resolve }) => {
+let platform: App.Platform;
+
+if (dev) {
+	const { getPlatformProxy } = await import('wrangler');
+	platform = (await getPlatformProxy()) as unknown as App.Platform;
+}
+
+export const handle: Handle = async ({ event, resolve }) => {
+	// initialize database
+	if (dev && platform) {
+		event.platform = {
+			...event.platform,
+			...platform
+		};
+	}
+	Db.initialize(event.platform!.env.DB);
+
 	const sessionToken = event.cookies.get(auth.sessionCookieName);
 	if (!sessionToken) {
 		event.locals.user = null;
@@ -21,5 +39,3 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 
 	return resolve(event);
 };
-
-export const handle: Handle = handleAuth;
