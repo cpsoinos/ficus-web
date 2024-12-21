@@ -1,14 +1,22 @@
 import { defineConfig } from 'drizzle-kit';
-if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+
+const { DATABASE_URL, CF_DB_ID, CF_D1_TOKEN, CF_ACCOUNT_ID } = process.env;
 
 export default defineConfig({
 	schema: './src/lib/server/db/schema.ts',
-
-	dbCredentials: {
-		url: process.env.DATABASE_URL
-	},
-
+	out: './migrations',
+	dialect: 'sqlite',
 	verbose: true,
 	strict: true,
-	dialect: 'sqlite'
+
+	...(DATABASE_URL
+		? { dbCredentials: { url: DATABASE_URL } }
+		: {
+				driver: 'd1-http',
+				dbCredentials: {
+					databaseId: CF_DB_ID!,
+					token: CF_D1_TOKEN!,
+					accountId: CF_ACCOUNT_ID!
+				}
+			})
 });
