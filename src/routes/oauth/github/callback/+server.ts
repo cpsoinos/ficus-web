@@ -43,9 +43,23 @@ export async function GET(event: RequestEvent): Promise<Response> {
 			Authorization: `Bearer ${tokens.accessToken()}`
 		}
 	});
+	let email = githubUser.email;
+	if (!email) {
+		const emails = await ofetch<
+			{ email: string; primary: boolean; verified: boolean; visibility: 'public' | null }[]
+		>('https://api.github.com/user/emails', {
+			headers: {
+				Authorization: `Bearer ${tokens.accessToken()}`
+			}
+		});
+		email =
+			emails.find((e) => e.primary && e.verified)?.email ||
+			emails.find((e) => e.verified)?.email ||
+			emails[0].email;
+	}
 	const githubUserId = githubUser.id.toString();
 
-	const [{ user: existingUser }] = await db
+	const [result] = await db
 		.select({
 			user: { id: table.user.id, email: table.user.email },
 			oauthAccount: table.oAuthAccount
@@ -58,6 +72,8 @@ export async function GET(event: RequestEvent): Promise<Response> {
 				eq(table.oAuthAccount.providerUserId, githubUserId)
 			)
 		);
+
+	const existingUser = result?.user;
 
 	if (existingUser) {
 		const sessionToken = generateSessionToken();
@@ -72,7 +88,7 @@ export async function GET(event: RequestEvent): Promise<Response> {
 	}
 
 	const user = await createUser({
-		email: githubUser.email!,
+		email,
 		name: githubUser.name
 	});
 

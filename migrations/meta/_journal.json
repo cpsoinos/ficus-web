@@ -8,6 +8,13 @@
       "when": 1734802198280,
       "tag": "0000_sudden_rockslide",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1734896138357,
+      "tag": "0001_kind_true_believers",
+      "breakpoints": true
     }
   ]
 }

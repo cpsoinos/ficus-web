@@ -4,11 +4,11 @@ import { and, eq, isNotNull } from 'drizzle-orm';
 import * as auth from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import type { Actions, PageServerLoad } from '../demo/lucia/login/$types';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
-		return redirect(302, '/demo/lucia');
+		return redirect(302, '/');
 	}
 	return {};
 };
@@ -26,7 +26,6 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid password' });
 		}
 
-		// const results = await db.select().from(table.user).where(eq(table.user.email, email));
 		const existingUser = await db.query.user.findFirst({
 			where: and(eq(table.user.email, email), isNotNull(table.user.passwordHash))
 		});

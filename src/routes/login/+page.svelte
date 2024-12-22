@@ -19,3 +19,5 @@
 	<button formaction="?/register">Register</button>
 </form>
 <p style="color: red">{form?.message ?? ''}</p>
+
+<a href="/oauth/github">Sign in with GitHub</a>
