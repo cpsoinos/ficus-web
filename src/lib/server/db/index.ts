@@ -1,20 +1,26 @@
-import { drizzle } from 'drizzle-orm/d1';
+import { drizzle, type DrizzleD1Database } from 'drizzle-orm/d1';
+import * as schema from './schema';
 
-export class Db {
-	db: ReturnType<typeof drizzle>;
-	static instance: Db;
+export type SchematizedDatabase = DrizzleD1Database<typeof schema>;
 
-	private constructor(database: D1Database) {
-		this.db = drizzle(database);
-	}
+export class DbSingleton {
+	static _db: SchematizedDatabase;
 
 	static initialize(database: D1Database) {
-		Db.instance = new Db(database);
-	}
-
-	static getInstance() {
-		return Db.instance;
+		DbSingleton._db = drizzle(database);
 	}
 }
 
-export const db = Db.getInstance()?.db;
+type DbSingletonType = typeof DbSingleton & SchematizedDatabase;
+
+export const db = new Proxy(DbSingleton, {
+	get(target, prop, receiver) {
+		if (prop in target) {
+			return Reflect.get(target, prop, receiver);
+		}
+		if (DbSingleton._db && prop in DbSingleton._db) {
+			return DbSingleton._db[prop as keyof typeof DbSingleton._db];
+		}
+		return undefined;
+	}
+}) as DbSingletonType;

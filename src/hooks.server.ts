@@ -1,7 +1,7 @@
 import { dev } from '$app/environment';
 import type { Handle } from '@sveltejs/kit';
 import * as auth from '$lib/server/auth.js';
-import { Db } from '$lib/server/db';
+import { DbSingleton } from '$lib/server/db';
 import { sequence } from '@sveltejs/kit/hooks';
 
 let platform: App.Platform;
@@ -19,7 +19,7 @@ const devShim: Handle = async ({ event, resolve }) => {
 };
 
 const initDb: Handle = async ({ event, resolve }) => {
-	Db.initialize(event.platform!.env.DB);
+	DbSingleton.initialize(event.platform!.env.DB);
 	return resolve(event);
 };
 
