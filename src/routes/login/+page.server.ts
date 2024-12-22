@@ -1,10 +1,10 @@
 import { hash, verify } from '@node-rs/argon2';
 import { fail, redirect } from '@sveltejs/kit';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import * as auth from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import * as table from '$lib/server/db/schema';
-import type { Actions, PageServerLoad } from './$types';
+import type { Actions, PageServerLoad } from '../demo/lucia/login/$types';
 
 export const load: PageServerLoad = async (event) => {
 	if (event.locals.user) {
@@ -26,14 +26,16 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid password' });
 		}
 
-		const results = await db.select().from(table.user).where(eq(table.user.email, email));
+		// const results = await db.select().from(table.user).where(eq(table.user.email, email));
+		const existingUser = await db.query.user.findFirst({
+			where: and(eq(table.user.email, email), isNotNull(table.user.passwordHash))
+		});
 
-		const existingUser = results.at(0);
 		if (!existingUser) {
 			return fail(400, { message: 'Incorrect email or password' });
 		}
 
-		const validPassword = await verify(existingUser.passwordHash, password, {
+		const validPassword = await verify(existingUser.passwordHash!, password, {
 			memoryCost: 19456,
 			timeCost: 2,
 			outputLen: 32,
@@ -47,8 +49,9 @@ export const actions: Actions = {
 		const session = await auth.createSession(sessionToken, existingUser.id);
 		auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
 
-		return redirect(302, '/demo/lucia');
+		return redirect(302, '/');
 	},
+
 	register: async (event) => {
 		const formData = await event.request.formData();
 		const email = formData.get('email');
@@ -70,10 +73,7 @@ export const actions: Actions = {
 		});
 
 		try {
-			const [{ userId }] = await db
-				.insert(table.user)
-				.values({ email, passwordHash })
-				.returning({ userId: table.user.id });
+			const { id: userId } = await auth.createUser({ email, passwordHash });
 
 			const sessionToken = auth.generateSessionToken();
 			const session = await auth.createSession(sessionToken, userId);
@@ -82,7 +82,7 @@ export const actions: Actions = {
 			console.error(e);
 			return fail(500, { message: 'An error has occurred' });
 		}
-		return redirect(302, '/demo/lucia');
+		return redirect(302, '/');
 	}
 };
 
