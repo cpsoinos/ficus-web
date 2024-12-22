@@ -2,24 +2,28 @@ import { dev } from '$app/environment';
 import type { Handle } from '@sveltejs/kit';
 import * as auth from '$lib/server/auth.js';
 import { Db } from '$lib/server/db';
+import { sequence } from '@sveltejs/kit/hooks';
 
 let platform: App.Platform;
 
-if (dev) {
-	const { getPlatformProxy } = await import('wrangler');
-	platform = (await getPlatformProxy()) as unknown as App.Platform;
-}
-
-export const handle: Handle = async ({ event, resolve }) => {
-	// initialize database
-	if (dev && platform) {
+const devShim: Handle = async ({ event, resolve }) => {
+	if (dev) {
+		const { getPlatformProxy } = await import('wrangler');
+		platform = (await getPlatformProxy<Env>()) as unknown as App.Platform;
 		event.platform = {
 			...event.platform,
 			...platform
 		};
 	}
-	Db.initialize(event.platform!.env.DB);
+	return resolve(event);
+};
 
+const initDb: Handle = async ({ event, resolve }) => {
+	Db.initialize(event.platform!.env.DB);
+	return resolve(event);
+};
+
+const authHook: Handle = async ({ event, resolve }) => {
 	const sessionToken = event.cookies.get(auth.sessionCookieName);
 	if (!sessionToken) {
 		event.locals.user = null;
@@ -39,3 +43,5 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	return resolve(event);
 };
+
+export const handle: Handle = sequence(devShim, initDb, authHook);
