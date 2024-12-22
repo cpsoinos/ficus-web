@@ -1,9 +1,11 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
 export const user = sqliteTable('user', {
-	id: text('id').primaryKey(),
-	age: integer('age'),
-	username: text('username').notNull().unique(),
+	id: text('id')
+		.primaryKey()
+		.$defaultFn(() => crypto.randomUUID()),
+	email: text('email').notNull().unique(),
+	name: text('name'),
 	passwordHash: text('password_hash').notNull()
 });
 
@@ -16,5 +18,7 @@ export const session = sqliteTable('session', {
 });
 
 export type Session = typeof session.$inferSelect;
+export type NewSession = typeof session.$inferInsert;
 
 export type User = typeof user.$inferSelect;
+export type NewUser = typeof user.$inferInsert;
